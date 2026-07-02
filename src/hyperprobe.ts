@@ -7,5 +7,6 @@ if (process.env.NODE_ENV && process.env.GIT_COMMIT) {
     brokerUrl: 'https://logger.app.hyperprobe.co',
     commitSha: process.env.GIT_COMMIT, // CI-injected commit SHA
     distLocation: './dist',
+    syncIntervalMs: 5000
   });
 }
