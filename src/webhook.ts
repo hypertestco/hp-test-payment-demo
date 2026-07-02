@@ -46,7 +46,7 @@ webhookRouter.post(
       const amountInCents = data.amount_in_cents;
       const paymentType = data.payment_type;
       
-      const email = data.customer?.email || (data.customer?.id ? `${data.customer.id}@private.domain` : "anonymous@example.com");
+      const email = data.customer?.email;
 
       const jobId = `job_${Math.random().toString(36).substring(2, 9)}`;
 
