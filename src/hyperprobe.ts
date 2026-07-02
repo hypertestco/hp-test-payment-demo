@@ -8,7 +8,5 @@ if (process.env.NODE_ENV && process.env.GIT_COMMIT) {
     commitSha: process.env.GIT_COMMIT, // CI-injected commit SHA
     distLocation: './dist',
     syncIntervalMs: 5000,
-    maxObjectDepth: 6,
-    maxArrayLength: 20
   });
 }
