@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "hyperprobe": {
+      "type": "local",
+      "command": ["npx", "-y", "@hyperprobe/mcp-server"],
+      "enabled": true,
+      "environment": {
+        "BACKEND_URL": "https://app.hyperprobe.co"
+      }
+    }
+  }
+}

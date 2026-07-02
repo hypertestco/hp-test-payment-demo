@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔍 Service APM Webhook Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="h-full text-slate-100 font-sans flex flex-col antialiased">
+  <!-- APM Header -->
+  <header class="border-b border-slate-800 bg-slate-900 px-6 py-3 flex items-center justify-between shadow-md">
+    <div class="flex items-center space-x-4">
+      <div class="bg-indigo-600 text-white p-1.5 rounded font-black text-lg tracking-wider">APM</div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-semibold tracking-tight text-white uppercase">Payment-Receiver</span>
+          <span class="bg-indigo-500/10 text-indigo-400 text-[10px] px-1.5 py-0.5 rounded border border-indigo-500/20">v1.2.0-prod</span>
+        </div>
+        <p class="text-[11px] text-slate-400">Environment: <strong class="text-slate-300">production-us-east-1</strong> • Host: <span class="font-mono">k8s-pod-9a3b8</span></p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-4 text-xs">
+      <!-- Status Badge -->
+      <span id="status-badge" class="inline-flex items-center gap-1.5 rounded bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
+        <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        SERVICE: ACTIVE
+      </span>
+      <div class="text-right">
+        <span class="text-slate-400 text-[11px]">Last Refresh:</span>
+        <span id="last-refresh-time" class="font-mono text-slate-200">Never</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Dashboard -->
+  <main class="flex-1 overflow-auto p-6 space-y-6">
+    <!-- APM Banner/Intro -->
+    <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ring-1 ring-indigo-500/10">
+      <div class="space-y-1">
+        <h2 class="text-sm font-bold text-slate-200 flex items-center gap-1.5">
+          <span class="text-indigo-400">📊</span> Live Service Infrastructure Monitor
+        </h2>
+        <p class="text-xs text-slate-400 leading-relaxed max-w-3xl">
+          This dashboard displays real-time performance telemetry from the payment receiver microservice. It tracks webhook throughput, 
+          asynchronous queue worker performance, database insertion success rates, and standard process telemetry.
+        </p>
+      </div>
+    </div>
+
+    <!-- APM Gauges / Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-5">
+      <!-- Gauge 1: Total Webhook Requests -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-indigo-400">Throughput (5m)</span>
+        </div>
+        <p id="metric-requests" class="text-3xl font-extrabold text-white mt-1.5">0</p>
+      </div>
+
+      <!-- Gauge 2: Average Latency -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-violet-400">Average Latency (5m)</span>
+        </div>
+        <p class="text-3xl font-extrabold text-white mt-1.5">
+          <span id="metric-latency">0</span><span class="text-slate-500 text-lg font-normal ml-0.5">ms</span>
+        </p>
+      </div>
+
+      <!-- Gauge 3: Successful Payments -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">Successful Transactions</span>
+        </div>
+        <p id="metric-success" class="text-3xl font-extrabold text-emerald-400 mt-1.5">0</p>
+      </div>
+
+      <!-- Gauge 4: Queue Failures -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Queue Failures</span>
+        </div>
+        <p id="metric-errors" class="text-3xl font-extrabold text-amber-400 mt-1.5">0</p>
+      </div>
+
+      <!-- Gauge 5: Database Failures -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow ring-2 ring-red-500/10">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-red-400">Database Failures</span>
+        </div>
+        <p id="metric-db-errors" class="text-3xl font-extrabold text-red-500 mt-1.5">0</p>
+      </div>
+    </div>
+
+    <!-- Core Chart (APM Metric Graph) & Host Diagnostics -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Chart -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 col-span-2 flex flex-col justify-between shadow">
+        <div>
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Time-Series Metrics Explorer (Last 5 Minutes)</h3>
+            <span class="bg-slate-800 text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono">5s Granularity</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-0.5">Displays rolling performance analytics of webhook execution and queue jobs.</p>
+        </div>
+        <div class="h-64 mt-4 relative">
+          <canvas id="metricsChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Right Column Stack -->
+      <div class="flex flex-col gap-6 col-span-1">
+        <!-- Host Diagnostics & Telemetry Settings Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 flex flex-col justify-between shadow">
+          <div class="space-y-4">
+            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">🖥️ APM Diagnostics & Host Telemetry</h3>
+            
+            <div class="space-y-3 mt-4 text-xs">
+              <div>
+                <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span>CPU Core Allocation</span>
+                  <span id="host-cpu-val" class="font-mono text-slate-200">1.2%</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div id="host-cpu-bar" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-1000" style="width: 1.2%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span>Memory Footprint (Resident Set)</span>
+                  <span id="host-mem-val" class="font-mono text-slate-200">42.5 MB</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div id="host-mem-bar" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-1000" style="width: 25%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                  <span>V8 Heap Allocated</span>
+                  <span id="host-heap-val" class="font-mono text-slate-200">14.1 MB / 64 MB</span>
+                </div>
+                <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                  <div id="host-heap-bar" class="bg-indigo-500 h-1.5 rounded-full transition-all duration-1000" style="width: 22%"></div>
+                </div>
+              </div>
+
+              <hr class="border-slate-800 my-2">
+
+              <div class="space-y-1.5 text-[11px] text-slate-400 font-medium">
+                <div class="flex justify-between">
+                  <span>V8 Garbage Collection</span>
+                  <span class="text-emerald-400 font-semibold">Healthy (Scavenge)</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Active Event Listeners</span>
+                  <span class="text-slate-200 font-mono">15 / 100</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>V8 Engine JIT Compiler</span>
+                  <span class="text-slate-200">Turbofan</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Active Network Sockets</span>
+                  <span id="host-sockets-val" class="text-slate-200 font-mono">1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-500 pt-4 border-t border-slate-800 mt-4">Telemetry Polling Frequency: <strong>2000ms</strong></div>
+        </div>
+
+        <!-- Webhook Response Status Codes Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 shadow flex flex-col gap-3">
+          <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">🟢 HTTP Response Codes</h3>
+          <div class="space-y-3 mt-1 text-xs font-medium">
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>2xx (Success/Queued)</span>
+                <span id="status-2xx-val" class="font-mono text-emerald-400 font-bold">0</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                <div id="status-2xx-bar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>4xx (Client Error)</span>
+                <span id="status-4xx-val" class="font-mono text-amber-400 font-bold">0</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                <div id="status-4xx-bar" class="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>5xx (Server Error)</span>
+                <span id="status-5xx-val" class="font-mono text-red-500 font-bold">0</span>
+              </div>
+              <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                <div id="status-5xx-bar" class="bg-red-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-Time APM Terminal Logs -->
+    <div class="bg-slate-900 border border-slate-850 rounded-lg p-5 shadow flex flex-col h-80 font-medium">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+        <div class="flex items-center space-x-2">
+          <span class="flex h-2 w-2 relative">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+          </span>
+          <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">APM Real-Time Standard Log Stream</h3>
+        </div>
+        <div class="flex items-center space-x-3 text-[10px]">
+          <button onclick="clearTerminal()" class="text-slate-400 hover:text-slate-200 border border-slate-750 px-2 py-0.5 rounded">Clear Terminal</button>
+          <label class="flex items-center space-x-1.5 cursor-pointer text-slate-400">
+            <input type="checkbox" id="autoscroll-chk" checked class="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0">
+            <span>Autoscroll</span>
+          </label>
+        </div>
+      </div>
+      <!-- Terminal Window -->
+      <div id="terminal" class="flex-1 overflow-auto bg-slate-950 border border-slate-850 rounded p-4 font-mono text-[11px] text-slate-300 space-y-1.5 leading-relaxed shadow-inner">
+        <div class="text-slate-500 italic">[Waiting for log events...] Connected to APM Log Stream server via SSE...</div>
+      </div>
+    </div>
+
+    <!-- Databases & Diagnostics -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 font-medium">
+      <!-- Database Table Explorer (Latest 50, Scrollable) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 lg:col-span-3 shadow">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Latest Transactions</h3>
+          </div>
+          <span class="bg-indigo-950 text-indigo-400 border border-indigo-900/50 text-[10px] px-2 py-0.5 rounded font-mono">Limit: 50 Rows</span>
+        </div>
+        <!-- Scrollable Table Wrapper -->
+        <div class="overflow-x-auto border border-slate-850 rounded max-h-96 overflow-y-auto">
+          <table class="min-w-full divide-y divide-slate-800 text-xs text-left">
+            <thead class="bg-slate-950 sticky top-0 border-b border-slate-800">
+              <tr class="text-slate-400 uppercase tracking-wider text-[9px]">
+                <th class="p-3">payment_id (INT)</th>
+                <th class="p-3">Email</th>
+                <th class="p-3">Payment Type</th>
+                <th class="p-3 font-bold text-emerald-400">Amount</th>
+                <th class="p-3 text-right">Created At</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-table-body" class="divide-y divide-slate-800 text-slate-300">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-slate-800 bg-slate-900 px-6 py-3 text-[10px] text-slate-500 flex justify-between">
+    <div>&copy; 2026 Dynatrace-Style APM Portal</div>
+    <div>System Node: <strong>node-20.12-amd64</strong> • Engine: <strong>v8-turbo</strong></div>
+  </footer>
+
+  <!-- Interactive script -->
+  <script>
+    let chartInstance = null;
+
+    // Clear Terminal Logs
+    function clearTerminal() {
+      document.getElementById('terminal').innerHTML = '<div class="text-slate-500 italic">[Terminal cleared. Awaiting logs...]</div>';
+    }
+
+    // Connect to SSE log stream
+    function connectLogStream() {
+      const term = document.getElementById('terminal');
+      const eventSource = new EventSource('/api/logs/stream');
+      
+      eventSource.onmessage = function(event) {
+        const placeholder = term.querySelector('.italic');
+        if (placeholder) placeholder.remove();
+
+        let logText = event.data;
+        let colorClass = 'text-slate-300';
+        if (logText.includes('[ERROR]')) {
+          colorClass = 'text-red-400 font-semibold';
+        } else if (logText.includes('[INFO] Webhook')) {
+          colorClass = 'text-indigo-400';
+        } else if (logText.includes('[INFO] Successfully processed') || logText.includes('Consumer successfully processed')) {
+          colorClass = 'text-emerald-400';
+        } else if (logText.includes('[INFO] Queue Consumer processing')) {
+          colorClass = 'text-amber-400';
+        }
+
+        const logDiv = document.createElement('div');
+        logDiv.className = colorClass;
+        logDiv.innerText = logText;
+        term.appendChild(logDiv);
+
+        if (term.childNodes.length > 300) {
+          term.removeChild(term.firstChild);
+        }
+
+        if (document.getElementById('autoscroll-chk').checked) {
+          term.scrollTop = term.scrollHeight;
+        }
+      };
+
+      eventSource.onerror = function() {
+        console.log("Log stream connection interrupted. Retrying in 3s...");
+        eventSource.close();
+        setTimeout(connectLogStream, 3000);
+      };
+    }
+
+    // Initialize Chart.js
+    function initChart() {
+      const ctx = document.getElementById('metricsChart').getContext('2d');
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Successful Payments',
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.05)',
+              borderWidth: 2,
+              pointRadius: 1,
+              fill: true,
+              data: []
+            },
+            {
+              label: 'Consumer Errors',
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.05)',
+              borderWidth: 2,
+              pointRadius: 1,
+              fill: true,
+              data: []
+            },
+            {
+              label: 'Database Schema Errors',
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.05)',
+              borderWidth: 2,
+              pointRadius: 1,
+              fill: true,
+              data: []
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { size: 10 } }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 15 },
+              grid: { color: '#1e293b' }
+            },
+            y: {
+              ticks: { color: '#64748b', font: { size: 10 }, stepSize: 1 },
+              grid: { color: '#1e293b' },
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // Fetch and update metrics
+    async function updateDashboard() {
+      const badge = document.getElementById('status-badge');
+      try {
+        const metricsRes = await fetch('/metrics');
+        const metrics = await metricsRes.json();
+
+        const txRes = await fetch('/transactions');
+        const txs = await txRes.json();
+
+        // Update status badge
+        badge.className = "inline-flex items-center gap-1.5 rounded bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400 ring-1 ring-inset ring-emerald-500/20";
+        badge.innerHTML = '<span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>SERVICE: ACTIVE';
+
+        // Update refresh timer
+        document.getElementById('last-refresh-time').innerText = new Date().toLocaleTimeString();
+
+        // Update Key Performance Numbers
+        document.getElementById('metric-requests').innerText = metrics.lastHourSummary.throughput;
+        document.getElementById('metric-latency').innerText = metrics.lastHourSummary.avgLatency;
+
+        // Update key numbers
+        const totalQueueFailures = (metrics.cumulative.consumerErrors || 0) + (metrics.cumulative.directWebhookErrors || 0);
+        document.getElementById('metric-success').innerText = metrics.cumulative.successfulPayments;
+        document.getElementById('metric-errors').innerText = totalQueueFailures;
+        document.getElementById('metric-db-errors').innerText = metrics.cumulative.databaseErrors;
+
+        // Update HTTP Status Codes distribution
+        const s2xx = metrics.cumulative.status2xx || 0;
+        const s4xx = metrics.cumulative.status4xx || 0;
+        const s5xx = metrics.cumulative.status5xx || 0;
+        const totalStatus = s2xx + s4xx + s5xx;
+        
+        document.getElementById('status-2xx-val').innerText = s2xx;
+        document.getElementById('status-4xx-val').innerText = s4xx;
+        document.getElementById('status-5xx-val').innerText = s5xx;
+        
+        if (totalStatus > 0) {
+          document.getElementById('status-2xx-bar').style.width = ((s2xx / totalStatus) * 100) + '%';
+          document.getElementById('status-4xx-bar').style.width = ((s4xx / totalStatus) * 100) + '%';
+          document.getElementById('status-5xx-bar').style.width = ((s5xx / totalStatus) * 100) + '%';
+        } else {
+          document.getElementById('status-2xx-bar').style.width = '0%';
+          document.getElementById('status-4xx-bar').style.width = '0%';
+          document.getElementById('status-5xx-bar').style.width = '0%';
+        }
+
+        // Update Chart
+        const labels = metrics.hourly.map(h => h.timestamp);
+        const successData = metrics.hourly.map(h => h.successfulPayments);
+        const combinedErrorData = metrics.hourly.map(h => (h.consumerErrors || 0) + (h.directWebhookErrors || 0));
+        const dbErrorData = metrics.hourly.map(h => h.databaseErrors);
+
+        if (chartInstance) {
+          chartInstance.data.labels = labels;
+          chartInstance.data.datasets[0].data = successData;
+          chartInstance.data.datasets[1].data = combinedErrorData;
+          chartInstance.data.datasets[2].data = dbErrorData;
+          
+          // Calculate the highest number across all three datasets in our series
+          const allValues = [...successData, ...combinedErrorData, ...dbErrorData];
+          const maxVal = Math.max(...allValues, 0);
+          
+          // Adjust y-axis max limit to always be exactly twice the highest value (with a default min height of 4 to prevent squishing when empty)
+          chartInstance.options.scales.y.max = maxVal > 0 ? maxVal * 2 : 4;
+          
+          chartInstance.update('none'); // silent update
+        }
+
+        // Update Transactions Table (Limit 50, newest first)
+        const txTableBody = document.getElementById('transactions-table-body');
+        if (txs.length === 0) {
+          txTableBody.innerHTML = '<tr><td colspan="5" class="p-3 text-center text-slate-500">No database transactions recorded yet</td></tr>';
+        } else {
+          txTableBody.innerHTML = txs.map(function(t) {
+            var dateStr = t.created_at ? new Date(t.created_at).toLocaleTimeString() : 'N/A';
+            var amountFormatted = '$' + (t.amount/100).toFixed(2);
+            var typeFormatted = t.payment_type.replace('_', ' ');
+            return '<tr class="hover:bg-slate-900/60 transition text-xs">' +
+              '<td class="p-3 font-mono text-indigo-400 font-bold">' + t.payment_id + '</td>' +
+              '<td class="p-3 text-slate-300">' + t.email + '</td>' +
+              '<td class="p-3 capitalize text-slate-400">' + typeFormatted + '</td>' +
+              '<td class="p-3 font-bold text-emerald-400">' + amountFormatted + '</td>' +
+              '<td class="p-3 text-right text-slate-400">' + dateStr + '</td>' +
+            '</tr>';
+          }).join('');
+        }
+
+        // Update Host Diagnostics (REAL backend process statistics!)
+        if (metrics.hostStats) {
+          const cpu = parseFloat(metrics.hostStats.cpu);
+          const rss = parseFloat(metrics.hostStats.rss);
+          const heapUsed = parseFloat(metrics.hostStats.heapUsed);
+          const heapTotal = parseFloat(metrics.hostStats.heapTotal);
+          
+          document.getElementById('host-cpu-val').innerText = cpu.toFixed(1) + '%';
+          document.getElementById('host-cpu-bar').style.width = Math.min(cpu * 5, 100) + '%'; // scale for visual representation if low
+          
+          document.getElementById('host-mem-val').innerText = rss.toFixed(1) + ' MB';
+          document.getElementById('host-mem-bar').style.width = Math.min((rss / 256) * 100, 100) + '%'; // relative to standard 256MB container
+          
+          document.getElementById('host-heap-val').innerText = heapUsed.toFixed(1) + ' MB / ' + heapTotal.toFixed(1) + ' MB';
+          document.getElementById('host-heap-bar').style.width = Math.min((heapUsed / heapTotal) * 100, 100) + '%';
+          
+          document.getElementById('host-sockets-val').innerText = metrics.hostStats.activeConnections;
+        }
+
+      } catch (err) {
+        badge.className = "inline-flex items-center gap-1.5 rounded bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-400 ring-1 ring-inset ring-red-500/20";
+        badge.innerHTML = '<span class="h-2 w-2 rounded-full bg-red-400 animate-ping"></span>SERVICE: OFFLINE';
+        console.error("Dashboard poll failed. Server may be down.");
+      }
+    }
+
+    // Run
+    initChart();
+    updateDashboard();
+    connectLogStream();
+    setInterval(updateDashboard, 2000);
+  </script>
+</body>
+</html>
