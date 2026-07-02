@@ -173,12 +173,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // ==========================================
 process.on("uncaughtException", (error) => {
   console.error("[ERROR] Something went wrong.");
-  process.exit(1);
 });
 
 process.on("unhandledRejection", (reason) => {
   console.error("[ERROR] Something went wrong.");
-  process.exit(1);
 });
 
 // ==========================================

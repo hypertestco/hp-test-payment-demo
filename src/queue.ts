@@ -47,7 +47,7 @@ class BullPaymentQueue implements IPaymentQueue {
         );
         const { transactionId, amountInCents, paymentType, email } = job.data;
 
-        const normalizedEmail = email.toLowerCase();
+        const normalizedEmail = (email || "anonymous@example.com").toLowerCase();
 
         await insertTransaction({
           payment_id: transactionId,
