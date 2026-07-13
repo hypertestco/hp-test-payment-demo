@@ -3,7 +3,7 @@
   "mcp": {
     "hyperprobe": {
       "type": "local",
-      "command": ["npx", "-y", "@hyperprobe/mcp-server"],
+      "command": ["tsx", "/home/karan/Projects/prod-probe/prod-probe-monorepo/packages/mcp-server/src/index.ts"],
       "enabled": true,
       "environment": {
         "BACKEND_URL": "https://app.hyperprobe.co"

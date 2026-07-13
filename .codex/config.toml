@@ -1,0 +1,31 @@
+[mcp_servers.hyperprobe]
+command = "tsx"
+args = ["/home/karan/Projects/prod-probe/prod-probe-monorepo/packages/mcp-server/src/index.ts"]
+enabled = true
+
+[mcp_servers.hyperprobe.env]
+BACKEND_URL = "https://app.hyperprobe.co"
+
+[mcp_servers.hyperprobe.tools.get_debugging_playbook]
+approval_mode = "approve"
+
+[mcp_servers.hyperprobe.tools.list_services]
+approval_mode = "approve"
+
+[mcp_servers.hyperprobe.tools.list_active_agents]
+approval_mode = "approve"
+
+[mcp_servers.hyperprobe.tools.list_probes]
+approval_mode = "approve"
+
+[mcp_servers.hyperprobe.tools.list_snapshots]
+approval_mode = "approve"
+
+[mcp_servers.hyperprobe.tools.create_probe]
+approval_mode = "approve"
+
+[mcp_servers.hyperprobe.tools.wait_for_probe_ready]
+approval_mode = "approve"
+
+[mcp_servers.hyperprobe.tools.wait_for_snapshot]
+approval_mode = "approve"
