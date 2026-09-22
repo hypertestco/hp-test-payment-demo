@@ -3,10 +3,10 @@
   "mcp": {
     "hyperprobe": {
       "type": "local",
-      "command": ["tsx", "/home/karan/Projects/prod-probe/prod-probe-monorepo/packages/mcp-server/src/index.ts"],
+      "command": ["npx", "-y", "@hyperprobe/mcp-server"],
       "enabled": true,
       "environment": {
-        "BACKEND_URL": "https://app.hyperprobe.co"
+        "BACKEND_URL": "http://13.203.63.232:3001"
       }
     }
   }

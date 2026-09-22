@@ -1,3 +1,4 @@
+import "dotenv/config";
 import "./hyperprobe";
 import express from "express";
 import path from "path";

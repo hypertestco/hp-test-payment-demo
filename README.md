@@ -1,25 +1,55 @@
-# Payment Webhook Receiver
+# Payment Webhook RCA Demo
 
-This project is a TypeScript (Express) application designed to receive payment webhooks asynchronously using a **Redis & BullMQ** message queue and write transaction records to a strict **PostgreSQL** database. 
+This TypeScript Express service accepts payment webhooks, queues valid nested
+payloads in Redis/BullMQ, and writes them to PostgreSQL. The RCA scenario keeps
+an intentional compatibility defect for a legacy flat webhook payload.
 
----
+## Prerequisites
 
-## 🚀 Architectural Design (The API Version Matrix)
+- Node.js 20 or newer
+- Docker with Compose
+- A local `.env` based on `.env.example`, with non-placeholder database and
+  observability settings where those integrations are required
 
-The application logic is extremely clean and standard. Every webhook request received is pushed into a **Redis Queue** for asynchronous worker execution. 
+## Run The RCA Demo
 
+Run these commands from the repository root:
 
-## 🛠️ Setup & Running
-
-### 1. Install Dependencies
 ```bash
-npm install
+docker compose up -d --wait
+npm ci
+npm run build
+npm run start:prod
 ```
 
----
+## Trigger The Defect
 
-## 🔍 How to Debug these Issues in Seconds with Hyperprobe
+Send the synthetic legacy flat payload with a safe correlation ID:
 
-Add the mcp server to your AI coding tool and login to the hyperprobe.
+```bash
+curl -i http://localhost:3000/webhook \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-Id: rca-demo-001' \
+  --data '{"event":"payment.succeeded","transaction_id":4242,"amount_in_cents":1999,"payment_type":"one_time"}'
+```
 
-Describe the issues you are seeing at the demo link to your AI agent and tell it to do a root cause analysis using hyperprobe
+Expected result:
+
+- HTTP `500` with `X-Request-Id: rca-demo-001` in the response
+- The request fails at the intentional `data.transaction_id` access
+- No BullMQ job is queued
+- No transaction is written to PostgreSQL
+
+## Privacy
+
+Webhook bodies can contain customer data. Do not log payloads or email
+addresses, and do not place secrets in request IDs, URLs, probe conditions, or
+captured variables. Sentry request bodies, headers, cookies, query strings, and
+users are disabled and redacted defensively, but operators must still review
+all telemetry and HyperProbe probe targets before using real data.
+
+# Use your coding agent and debug the problem by giving prompt
+Use Hyperprobe mcp and debug the 500 response on post request on /webhook route.
+
+
+# Trigger the same curl again when asked for to replicate and catch the issue in runtime.
