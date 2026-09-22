@@ -48,8 +48,11 @@ captured variables. Sentry request bodies, headers, cookies, query strings, and
 users are disabled and redacted defensively, but operators must still review
 all telemetry and HyperProbe probe targets before using real data.
 
-# Use your coding agent and debug the problem by giving prompt
+## Coding agent usage
+
+Use your coding agent and debug the problem by giving the following prompt.
 Use Hyperprobe mcp and debug the 500 response on post request on /webhook route.
 
+## Traffic trigger
 
-# Trigger the same curl again when asked for to replicate and catch the issue in runtime.
+Trigger the same curl again when asked for to replicate and catch the issue in runtime.
